@@ -152,15 +152,11 @@ def crop(image, fheight=500, fwidth=500, facePercent=50,
     else:
         raise Exception("unsupported border, use replicate or reflect")
 
-    window_name = "border"
-
-    cv2.namedWindow(window_name, cv2.WINDOW_AUTOSIZE)
-
     y_pad = max([int((fheight - image.shape[0]) / 2), 0])
     x_pad = max([int((fwidth - image.shape[1]) / 2), 0])
 
     image = cv2.copyMakeBorder(image, y_pad, y_pad, x_pad, x_pad, border_type)
-    
+
     # ====== Dealing with underexposition ======
     if FIXEXP:
         # Check if under-exposed
