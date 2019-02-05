@@ -150,7 +150,7 @@ def crop(image, fheight=500, fwidth=500, facePercent=50,
     elif border == 'reflect':
         border_type = cv2.BORDER_REFLECT_101
     else:
-        raise Exception(f"unsupported border: {border}")
+        raise Exception("unsupported border, use replicate or reflect")
 
     window_name = "border"
 
@@ -159,14 +159,8 @@ def crop(image, fheight=500, fwidth=500, facePercent=50,
     y_pad = max([int((fheight - image.shape[0]) / 2), 0])
     x_pad = max([int((fwidth - image.shape[1]) / 2), 0])
 
-    print(f"{y_pad} {x_pad}")
-
     image = cv2.copyMakeBorder(image, y_pad, y_pad, x_pad, x_pad, border_type)
-
-    # Resize
-    # image = cv2.resize(image, (fwidth, fheight),
-    #                    interpolation=cv2.INTER_AREA)
-
+    
     # ====== Dealing with underexposition ======
     if FIXEXP:
         # Check if under-exposed
