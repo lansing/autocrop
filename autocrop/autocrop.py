@@ -86,7 +86,8 @@ def crop_positions(imgh, imgw, x, y, w, h,
 
 
 def crop(image, fheight=500, fwidth=500, facePercent=50,
-         padUp=False, padDown=False, padLeft=False, padRight=False):
+         padUp=False, padDown=False, padLeft=False, padRight=False,
+         border='replicate', facepad=0.0):
     """Given a ndarray image with a face, returns cropped array.
 
     Arguments:
@@ -138,9 +139,33 @@ def crop(image, fheight=500, fwidth=500, facePercent=50,
     # Actual cropping
     image = image[pos[0]:pos[1], pos[2]:pos[3]]
 
-    # Resize
-    image = cv2.resize(image, (fwidth, fheight),
+    uheight = int(fheight / (1 + facepad))
+    uwidth = int(fwidth / (1 + facepad))
+
+    image = cv2.resize(image, (uwidth, uheight),
                        interpolation=cv2.INTER_AREA)
+
+    if border == 'replicate':
+        border_type = cv2.BORDER_REPLICATE
+    elif border == 'reflect':
+        border_type = cv2.BORDER_REFLECT_101
+    else:
+        raise Exception(f"unsupported border: {border}")
+
+    window_name = "border"
+
+    cv2.namedWindow(window_name, cv2.WINDOW_AUTOSIZE)
+
+    y_pad = max([int((fheight - image.shape[0]) / 2), 0])
+    x_pad = max([int((fwidth - image.shape[1]) / 2), 0])
+
+    print(f"{y_pad} {x_pad}")
+
+    image = cv2.copyMakeBorder(image, y_pad, y_pad, x_pad, x_pad, border_type)
+
+    # Resize
+    # image = cv2.resize(image, (fwidth, fheight),
+    #                    interpolation=cv2.INTER_AREA)
 
     # ====== Dealing with underexposition ======
     if FIXEXP:
@@ -160,7 +185,9 @@ def main(input_d,
          padUp=False,
          padDown=False,
          padLeft=False,
-         padRight=False):
+         padRight=False,
+         border='replicate',
+         facepad=0.0):
     """Crops folder of images to the desired height and width if a face is found
 
     If input_d == output_d or output_d is None, overwrites all files
@@ -213,19 +240,21 @@ def main(input_d,
                      padUp,
                      padDown,
                      padLeft,
-                     padRight)
+                     padRight,
+                     border,
+                     facepad)
 
         # Did the crop produce a valid image
         if isinstance(image, type(None)):
-            if input_filename != reject_filename:
-                # Move the file to the reject directory
-                shutil.move(input_filename, reject_filename)
+            # if input_filename != reject_filename:
+            #     # Move the file to the reject directory
+            #     shutil.move(input_filename, reject_filename)
             print('No face detected: {}'.format(reject_filename))
             reject_count += 1
         else:
-            if input_filename != output_filename:
-                # Move the file to the output directory
-                shutil.move(input_filename, output_filename)
+            # if input_filename != output_filename:
+            #     Move the file to the output directory
+            #     shutil.move(input_filename, output_filename)
             # Write the cropped image
             cv2.imwrite(output_filename, image)
             print('Face detected:    {}'.format(output_filename))
@@ -347,6 +376,10 @@ def parse_args(args):
             'padDown': 'Add padding down to face cropped',
             'padLeft': 'Add padding left to face cropped',
             'padRight': 'Add padding right to face cropped',
+            'border': '''type of border
+                        default: replicate''',
+            'facepad': '''proportion to add around face 
+                            default: 0.0'''
             }
 
     parser = argparse.ArgumentParser(description=help_d['desc'])
@@ -373,7 +406,9 @@ def parse_args(args):
                         default=False, help=help_d['padRight'])
     parser.add_argument('--facePercent', type=size,
                         default=50, help=help_d['facePercent'])
-
+    parser.add_argument('--border', type=str, default='replicate', help=help_d['border'])
+    parser.add_argument('--facepad', type=float,
+                        default=0.0, help=help_d['facepad'])
     return parser.parse_args()
 
 
@@ -395,4 +430,6 @@ def cli():
          args.padUp,
          args.padDown,
          args.padLeft,
-         args.padRight)
+         args.padRight,
+         args.border,
+         args.facepad)
