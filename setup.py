@@ -21,7 +21,8 @@ AUTHOR = 'François Leblanc'
 # What packages are required for this module to be executed?
 REQUIRED = [
     'numpy>=1.10',
-    'opencv-python>=3, <4'
+    # 'opencv-python>=3, <4',
+    'opencv-contrib-python>=3, <4'
 ]
 
 # The rest you shouldn't have to touch too much :)
@@ -90,7 +91,8 @@ setup(
     # py_modules=['mypackage'],
 
     entry_points={
-        'console_scripts': ['autocrop=autocrop:cli'],
+        'console_scripts': ['autocrop=autocrop:cli',
+                            'justcrop=justcrop:cli'],
     },
     install_requires=REQUIRED,
     include_package_data=True,
