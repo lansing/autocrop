@@ -3,6 +3,8 @@
 from __future__ import print_function
 
 import argparse
+from random import random
+
 import cv2
 import numpy as np
 import os
@@ -122,17 +124,45 @@ def crop(image, fheight=500, fwidth=500,
     image = cv2.resize(image, (uwidth, uheight),
                        interpolation=cv2.INTER_AREA)
 
-    if border == 'replicate':
-        border_type = cv2.BORDER_REPLICATE
-    elif border == 'reflect':
-        border_type = cv2.BORDER_REFLECT_101
+    y_pad = max([int((fheight - uheight) / 2), 0])
+    x_pad = max([int((fwidth - uwidth) / 2), 0])
+
+    if border == 'replicate' or border == 'reflect':
+        if border == 'replicate':
+            border_type = cv2.BORDER_REPLICATE
+        elif border == 'reflect':
+            border_type = cv2.BORDER_REFLECT_101
+
+        image = cv2.copyMakeBorder(image, y_pad, y_pad, x_pad, x_pad, border_type)
+
+    elif border == 'average':
+        corner_fill_zone = image[2:6, 2:6, ]
+        fill_color = np.mean(corner_fill_zone, (0, 1))
+
+        image = cv2.copyMakeBorder(image, y_pad, y_pad, x_pad, x_pad, cv2.BORDER_CONSTANT, None, fill_color)
+
+        if image.shape[:2] != (fheight, fwidth):
+            y_extra_pad = fheight - image.shape[0]
+            x_extra_pad = fwidth - image.shape[1]
+            image = cv2.copyMakeBorder(image, y_extra_pad, 0, x_extra_pad, 0, cv2.BORDER_CONSTANT, None, fill_color)
+
+    elif border == 'inpaint':
+        mask = np.ones((fwidth, fheight)).astype('uint8') * 1
+        mask[y_pad:(y_pad + uheight), x_pad:(x_pad + uwidth)] = 0
+
+        fill_color = [255, 255, 255]
+
+        image = cv2.copyMakeBorder(image, y_pad, y_pad, x_pad, x_pad, cv2.BORDER_CONSTANT, None, fill_color)
+
+        if image.shape[:2] != (fheight, fwidth):
+            y_extra_pad = fheight - image.shape[0]
+            x_extra_pad = fwidth - image.shape[1]
+            image = cv2.copyMakeBorder(image, y_extra_pad, 0, x_extra_pad, 0, cv2.BORDER_CONSTANT, None, fill_color)
+
+        image = cv2.inpaint(image, mask, 16, cv2.INPAINT_NS)
+
     else:
         raise Exception("unsupported border, use replicate or reflect")
-
-    y_pad = max([int((fheight - image.shape[0]) / 2), 0])
-    x_pad = max([int((fwidth - image.shape[1]) / 2), 0])
-
-    image = cv2.copyMakeBorder(image, y_pad, y_pad, x_pad, x_pad, border_type)
 
     return image
 
