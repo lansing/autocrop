@@ -150,7 +150,8 @@ def crop(image, fheight=500, fwidth=500,
         mask = np.ones((fwidth, fheight)).astype('uint8') * 1
         mask[y_pad:(y_pad + uheight), x_pad:(x_pad + uwidth)] = 0
 
-        fill_color = [255, 255, 255]
+        corner_fill_zone = image[2:6, 2:6, ]
+        fill_color = np.mean(corner_fill_zone, (0, 1))
 
         image = cv2.copyMakeBorder(image, y_pad, y_pad, x_pad, x_pad, cv2.BORDER_CONSTANT, None, fill_color)
 
