@@ -88,7 +88,7 @@ def crop_positions(imgh, imgw, x, y, w, h,
 
 
 def crop(image, fheight=500, fwidth=500,
-         padUp=False, padDown=False, padLeft=False, padRight=False,
+         outerPad = 0,
          border='replicate'):
     """Given a ndarray image with a face, returns cropped array.
 
@@ -121,6 +121,9 @@ def crop(image, fheight=500, fwidth=500,
         uheight = int(height * fwidth / width)
         uwidth = fwidth
 
+    uwidth = uwidth - outerPad
+    uheight = uheight - outerPad
+
     image = cv2.resize(image, (uwidth, uheight),
                        interpolation=cv2.INTER_AREA)
 
@@ -148,7 +151,7 @@ def crop(image, fheight=500, fwidth=500,
 
     elif border == 'inpaint':
         mask = np.ones((fwidth, fheight)).astype('uint8') * 1
-        mask[y_pad:(y_pad + uheight), x_pad:(x_pad + uwidth)] = 0
+        mask[y_pad+1:(y_pad + uheight), x_pad+1:(x_pad + uwidth)] = 0
 
         corner_fill_zone = image[2:6, 2:6, ]
         fill_color = np.mean(corner_fill_zone, (0, 1))
@@ -158,9 +161,11 @@ def crop(image, fheight=500, fwidth=500,
         if image.shape[:2] != (fheight, fwidth):
             y_extra_pad = fheight - image.shape[0]
             x_extra_pad = fwidth - image.shape[1]
-            image = cv2.copyMakeBorder(image, y_extra_pad, 0, x_extra_pad, 0, cv2.BORDER_CONSTANT, None, fill_color)
+            image = cv2.copyMakeBorder(image, 0, y_extra_pad, 0, x_extra_pad, cv2.BORDER_CONSTANT, None, fill_color)
 
-        image = cv2.inpaint(image, mask, 16, cv2.INPAINT_NS)
+        image_inpaint = cv2.inpaint(image, mask, 8, cv2.INPAINT_NS)
+
+        image = cv2.addWeighted(image, 0.0, image_inpaint, 1.0, 0)
 
     else:
         raise Exception("unsupported border, use replicate or reflect")
@@ -173,10 +178,7 @@ def main(input_d,
          reject_d,
          fheight=500,
          fwidth=500,
-         padUp=False,
-         padDown=False,
-         padLeft=False,
-         padRight=False,
+         outerPad = 0,
          border='replicate'):
     """Crops folder of images to the desired height and width if a face is found
 
@@ -221,30 +223,32 @@ def main(input_d,
 
         # Attempt the crop
         input_img = cv2.imread(input_filename)
-        image = crop(input_img,
-                     fheight,
-                     fwidth,
-                     padUp,
-                     padDown,
-                     padLeft,
-                     padRight,
-                     border)
 
-        # Did the crop produce a valid image
-        if isinstance(image, type(None)):
-            # if input_filename != reject_filename:
-            #     # Move the file to the reject directory
-            #     shutil.move(input_filename, reject_filename)
+        if isinstance(input_img, type(None)):
             print('Skipping: {}'.format(reject_filename))
             reject_count += 1
         else:
-            # if input_filename != output_filename:
-            #     Move the file to the output directory
-            #     shutil.move(input_filename, output_filename)
-            # Write the cropped image
-            cv2.imwrite(output_filename, image)
-            print('Cropping:    {}'.format(output_filename))
-            output_count += 1
+            image = crop(input_img,
+                         fheight,
+                         fwidth,
+                         outerPad,
+                         border)
+
+            # Did the crop produce a valid image
+            if isinstance(image, type(None)):
+                # if input_filename != reject_filename:
+                #     # Move the file to the reject directory
+                #     shutil.move(input_filename, reject_filename)
+                print('Skipping: {}'.format(reject_filename))
+                reject_count += 1
+            else:
+                # if input_filename != output_filename:
+                #     Move the file to the output directory
+                #     shutil.move(input_filename, output_filename)
+                # Write the cropped image
+                cv2.imwrite(output_filename, image)
+                print('Cropping:    {}'.format(output_filename))
+                output_count += 1
 
     # Stop and print status
     print('{} input files, {} faces cropped, {} rejected'.format(
@@ -358,10 +362,7 @@ def parse_args(args):
             'height': 'Height of cropped files in px. Default=500',
             'y': 'Bypass any confirmation prompts',
             'facePercent': 'Percentage of face to image height',
-            'padUp': 'Add padding up to face cropped',
-            'padDown': 'Add padding down to face cropped',
-            'padLeft': 'Add padding left to face cropped',
-            'padRight': 'Add padding right to face cropped',
+            'outerPad': 'Padding to add to every image',
             'border': '''type of border
                         default: replicate''',
             'facepad': '''proportion to add around face 
@@ -382,14 +383,8 @@ def parse_args(args):
     parser.add_argument('-v', '--version', action='version',
                         version='%(prog)s version {}'.format(__version__))
     parser.add_argument('--no-confirm', action='store_true', help=help_d['y'])
-    parser.add_argument('--padUp', type=size,
-                        default=False, help=help_d['padUp'])
-    parser.add_argument('--padDown', type=size,
-                        default=False, help=help_d['padDown'])
-    parser.add_argument('--padLeft', type=size,
-                        default=False, help=help_d['padLeft'])
-    parser.add_argument('--padRight', type=size,
-                        default=False, help=help_d['padRight'])
+    parser.add_argument('--outerPad', type=size,
+                        default=0, help=help_d['outerPad'])
     parser.add_argument('--border', type=str, default='replicate', help=help_d['border'])
     return parser.parse_args()
 
@@ -408,8 +403,5 @@ def cli():
          args.reject,
          args.height,
          args.width,
-         args.padUp,
-         args.padDown,
-         args.padLeft,
-         args.padRight,
+         args.outerPad,
          args.border)
