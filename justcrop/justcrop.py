@@ -145,7 +145,7 @@ def crop(image, fheight=500, fwidth=500,
         image = cv2.copyMakeBorder(image, y_pad, y_pad, x_pad, x_pad, cv2.BORDER_CONSTANT, None, fill_color)
 
         if image.shape[:2] != (fheight, fwidth):
-            y_extra_pad = fheight - image.shape[0]
+            y_extra_pad = fheight - image.shape[1]
             x_extra_pad = fwidth - image.shape[1]
             image = cv2.copyMakeBorder(image, y_extra_pad, 0, x_extra_pad, 0, cv2.BORDER_CONSTANT, None, fill_color)
 

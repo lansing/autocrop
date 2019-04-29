@@ -93,7 +93,8 @@ setup(
     entry_points={
         'console_scripts': ['autocrop=autocrop:cli',
                             'justcrop=justcrop:cli',
-                            'justpad=justpad:cli'],
+                            'justpad=justpad:cli',
+                            'denoise=denoise:cli'],
     },
     install_requires=REQUIRED,
     include_package_data=True,
